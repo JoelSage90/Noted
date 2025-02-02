@@ -11,7 +11,6 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) {
         String model = "deepseek-r1:1.5b";
-        String fullResponse = "";
 
         //takes user input for notes and number of questions
         Scanner s = new Scanner(System.in);
@@ -30,44 +29,55 @@ public class Main {
         }
         
         s.close();
-        String prompt = String.format(
-    "Given the following notes, generate"+num.toString()+"multiple-choice questions with 4 options for each question. " +
-    "Provide the correct answer key at the end in this format:\n\n" +
-    "Questions:\n" +
-    "\n\n" +
-    "Answers:\n" +
-    "\n\n" +
-    "Notes: "+ notes.toString());
-        try{
-            //Set up an HTTP POST request
-            URL url = new URI("http://localhost:11434/api/generate").toURL();
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
-            
-            // Create request JSON
-            JSONObject requestJson = new JSONObject();
-            requestJson.put("model", model);
-            requestJson.put("prompt", prompt);
-            requestJson.put("stream", false); //gives result when done (instead of word by word)
+        try {
+            //first promot to Generate questions
+            String questionsPrompt = String.format(
+                "Generate %s multiple-choice questions with 4 options each. " +
+                "Include ONLY the questions (no answers) in this format:\n\n" +
+                "Questions:\n1. [Question]?\nA) ...\nB) ...\nC) ...\nD) ...\n\n" +
+                "Notes: %s", num, notes.toString()
+            );
+            String questionsResponse = sendAPIRequest(model, questionsPrompt);
 
-            //send request
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(requestJson.toString().getBytes());
-            }
-            // Get response
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                //response is in a json format so this is cleaned and stored in variable
-                String responseLine = br.readLine();
-                JSONObject responseJson = new JSONObject(responseLine);
-                fullResponse = responseJson.getString("response");
-            }
+            // next promot to get answersGenerate answers
+            String answersPrompt = String.format(
+                "Given these questions, provide the correct answers in the format:\n\n" +
+                "Answers:\n1. [Correct Option]\n2. [Correct Option]\n...\n\n" +
+                "Questions:\n%s\nNotes: %s", questionsResponse, notes.toString()
+            );
+            String answersResponse = sendAPIRequest(model, answersPrompt);
 
-            System.out.println(fullResponse);
-        }
-        catch(Exception e){
+            // Print results
+            System.out.println("\n--- QUESTIONS ---\n" + questionsResponse);
+            System.out.println("\n--- ANSWERS ---\n" + answersResponse);
+
+        } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    //method to for api requests
+    private static String sendAPIRequest(String model, String prompt) throws Exception {
+        URL url = new URI("http://localhost:11434/api/generate").toURL();
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+
+        JSONObject requestJson = new JSONObject();
+        requestJson.put("model", model);
+        requestJson.put("prompt", prompt);
+        requestJson.put("stream", false);
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(requestJson.toString().getBytes());
+        }
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            String responseLine = br.readLine();
+            JSONObject responseJson = new JSONObject(responseLine);
+            String fullResponse = responseJson.getString("response");
+            return fullResponse.replaceAll("(?s)<think>.*?</think>", "").trim();
         }
     }
 }
