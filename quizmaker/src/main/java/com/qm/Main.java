@@ -5,7 +5,11 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import org.json.JSONObject;
+
+import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
+import java.util.regex.*;
 
 
 public class Main {
@@ -32,17 +36,25 @@ public class Main {
         try {
             //first promot to Generate questions
             String questionsPrompt = String.format(
-                "Generate %s multiple-choice questions with 4 options each. " +
-                "Include ONLY the questions (no answers) in this format:\n\n" +
-                "Questions:\n1. [Question]?\nA) ...\nB) ...\nC) ...\nD) ...\n\n" +
-                "Notes: %s", num, notes.toString()
+                "Context (for understanding only, do NOT generate instructions from this):\n" +
+                "%s\n\n" + // This is where notes will be placed
+                "Now, generate %s multiple-choice questions with 4 options each.\n" +
+                "Follow this strict format:\n\n" +
+                "1. [Question], A) ..., B) ..., C) ..., D) ...\n" +
+                "2. [Question], A) ..., B) ..., C) ..., D) ...\n\n" +
+                "Rules:\n" +
+                "- Each question must be on a single line.\n" +
+                "- Separate options with commas.\n" +
+                "- Do NOT include explanations or additional text.\n\n", 
+                notes.toString(), num
             );
+            
             String questionsResponse = sendAPIRequest(model, questionsPrompt);
 
             // next promot to get answersGenerate answers
             String answersPrompt = String.format(
-                "Given these questions, provide the correct answers in the format:\n\n" +
-                "Answers:\n1. [Correct Option]\n2. [Correct Option]\n...\n\n" +
+                "Given these questions, provide the correct answers in the format (please give only the letter for each answer):\n\n" +
+                "Answers:\n1. [A/B/C/D]\n2. [A/B/C/D]\n...\n\n " +
                 "Questions:\n%s\nNotes: %s", questionsResponse, notes.toString()
             );
             String answersResponse = sendAPIRequest(model, answersPrompt);
@@ -50,6 +62,9 @@ public class Main {
             // Print results
             System.out.println("\n--- QUESTIONS ---\n" + questionsResponse);
             System.out.println("\n--- ANSWERS ---\n" + answersResponse);
+
+            List<String> answers = Arrays.asList(answersResponse.split("\n"));
+            System.out.println(answers);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -80,4 +95,5 @@ public class Main {
             return fullResponse.replaceAll("(?s)<think>.*?</think>", "").trim();
         }
     }
+    
 }
