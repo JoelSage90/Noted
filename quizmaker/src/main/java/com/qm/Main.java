@@ -6,10 +6,11 @@ import java.net.URI;
 import java.net.URL;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
-import java.util.regex.*;
+
 
 
 public class Main {
@@ -62,9 +63,9 @@ public class Main {
             // Print results
             System.out.println("\n--- QUESTIONS ---\n" + questionsResponse);
             System.out.println("\n--- ANSWERS ---\n" + answersResponse);
-
-            List<String> answers = Arrays.asList(answersResponse.split("\n"));
-            System.out.println(answers);
+            List<List<String>> questions = parseResponse(questionsResponse);
+            List<List<String>> answers = parseResponse(answersResponse);
+            System.out.println(questions);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -94,6 +95,16 @@ public class Main {
             String fullResponse = responseJson.getString("response");
             return fullResponse.replaceAll("(?s)<think>.*?</think>", "").trim();
         }
+    }
+    //function to parse api responses to make them in list/array format
+    private static List<List<String>> parseResponse(String response){
+        List<List<String>> parsedList = new ArrayList<List<String>>();
+        List<String> split_lines = Arrays.asList(response.split("\n"));
+        for(String line: split_lines){
+            List<String> split_commas = Arrays.asList(line.split(","));
+            parsedList.add(split_commas);
+        }
+        return parsedList;
     }
     
 }
