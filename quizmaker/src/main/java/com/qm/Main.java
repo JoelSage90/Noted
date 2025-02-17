@@ -22,7 +22,7 @@ public class Main {
         System.out.println("enter number of questions: ");
         String num = s.nextLine();
 
-        StringBuilder notes = new StringBuilder();
+        StringBuilder notes_scanner = new StringBuilder();
         System.out.println("enter notes (end notes with 'EXIT' for the end): ");
         
         while (true) {
@@ -30,10 +30,16 @@ public class Main {
             if (line.equalsIgnoreCase("EXIT")) {
                 break;//ends loop at EXIT
             }
-            notes.append(line).append("\n");
+            notes_scanner.append(line).append("\n");
         }
         
         s.close();
+        String notes = notes_scanner.toString();
+        List<List<List<String>>> questions_and_answers = q_and_as_list(notes,num, model);
+        System.out.println(questions_and_answers);
+        
+    }
+    public static List<List<List<String>>> q_and_as_list(String notes, String num, String model){
         try {
             //first promot to Generate questions
             String questionsPrompt = String.format(
@@ -60,15 +66,21 @@ public class Main {
             );
             String answersResponse = sendAPIRequest(model, answersPrompt);
 
-            // Print results
+            // Print results (error checking)
             System.out.println("\n--- QUESTIONS ---\n" + questionsResponse);
             System.out.println("\n--- ANSWERS ---\n" + answersResponse);
             List<List<String>> questions = parseResponse(questionsResponse);
             List<List<String>> answers = parseResponse(answersResponse);
-            System.out.println(questions);
+            //3d list used to store both questions and answers in one variable (index of q and as  match)
+            List<List<List<String>>> q_and_a = new ArrayList<>();
+            q_and_a.add(questions);
+            q_and_a.add(answers);
+            return q_and_a;
 
         } catch (Exception e) {
             e.printStackTrace();
+            //return empty 3d list if exception
+            return new ArrayList<>();
         }
     }
 
